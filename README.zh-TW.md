@@ -89,6 +89,7 @@ LICENSE_SIMILARITY_THRESHOLD: 0.9
 sbom_script/
 ├── input_file/          # 📥 放入您的 lock 檔案
 │   ├── yarn.lock
+│   ├── package.json     # (選用) 用於識別直接依賴
 │   └── Gemfile.lock
 ├── output_file/         # 📤 產出的 CSV 報告
 │   └── yarn_sbom_20260108_120000.csv
@@ -98,6 +99,17 @@ sbom_script/
 ├── requirements.txt     # Python 依賴
 └── sbom/                # 程式模組
 ```
+
+### 關於 package.json（選用）
+
+對於 `yarn.lock` 檔案，您可以選擇性地將專案的 `package.json` 放在同一目錄下：
+
+| 有 package.json | 無 package.json |
+|-----------------|-----------------|
+| ✅ 可識別直接依賴（標示 `[直接依賴]`） | ⚠️ 無法識別直接依賴 |
+| ✅ 只會顯示被其他套件引用的資訊 | ✅ 只會顯示被其他套件引用的資訊 |
+
+**建議**：如果需要在報告中區分直接依賴和間接依賴，請將 `package.json` 與 `yarn.lock` 放在同一目錄下。
 
 ## 使用方式
 

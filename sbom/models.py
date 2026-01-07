@@ -44,6 +44,12 @@ class RepoInfo:
         """Create RepoInfo from a GitHub URL."""
         # Normalize URL
         url = url.rstrip("/")
+        
+        # Remove fragment (e.g., #main, #master, #v1.0.0)
+        if "#" in url:
+            url = url.split("#")[0]
+        
+        # Remove .git suffix
         if url.endswith(".git"):
             url = url[:-4]
         

@@ -89,6 +89,7 @@ LICENSE_SIMILARITY_THRESHOLD: 0.9
 sbom_script/
 ├── input_file/          # 📥 Place your lock files here
 │   ├── yarn.lock
+│   ├── package.json     # (Optional) For identifying direct dependencies
 │   └── Gemfile.lock
 ├── output_file/         # 📤 Generated CSV reports
 │   └── yarn_sbom_20260108_120000.csv
@@ -98,6 +99,17 @@ sbom_script/
 ├── requirements.txt     # Python dependencies
 └── sbom/                # Program modules
 ```
+
+### About package.json (Optional)
+
+For `yarn.lock` files, you can optionally place the project's `package.json` in the same directory:
+
+| With package.json | Without package.json |
+|-------------------|---------------------|
+| ✅ Can identify direct dependencies (marked as `[Direct Dependency]`) | ⚠️ Cannot identify direct dependencies |
+| ✅ Shows which packages reference each package | ✅ Shows which packages reference each package |
+
+**Recommendation**: If you need to distinguish between direct and transitive dependencies in the report, place `package.json` alongside `yarn.lock`.
 
 ## Usage
 
