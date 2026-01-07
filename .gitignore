@@ -36,6 +36,11 @@ ENV/
 # Configuration (contains sensitive data like tokens)
 config.yaml
 
+# Input files (user-provided lock files)
+input_file/*.lock
+input_file/package.json
+input_file/Gemfile
+
 # Output files (generated)
 output_file/*.csv
 
