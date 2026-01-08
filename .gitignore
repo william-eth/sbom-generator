@@ -36,10 +36,13 @@ ENV/
 # Configuration (contains sensitive data like tokens)
 config.yaml
 
-# Input files (user-provided lock files)
+# Input files (user-provided lock files and Dockerfiles)
 input_file/*.lock
 input_file/package.json
 input_file/Gemfile
+input_file/Dockerfile
+input_file/Dockerfile_*
+input_file/Dockerfile.*
 
 # Output files (generated)
 output_file/*.csv
