@@ -1,36 +1,45 @@
-# SBOM Script
+# SBOM Generator
 
 [繁體中文版本](README.zh-TW.md)
 
-A tool for generating Software Bill of Materials (SBOM) reports. Extracts package dependencies, repository URLs, and license information from `yarn.lock` and `Gemfile.lock` files.
+A tool for generating Software Bill of Materials (SBOM) reports. Extracts package dependencies, repository URLs, and license information from lock files and Dockerfiles.
 
 ## Features
 
-- ✅ Supports multiple package managers (see [Supported Languages](#supported-languages))
+- ✅ Supports multiple package managers (see [Supported Types](#supported-types))
 - ✅ Builds complete dependency graphs
 - ✅ Queries repository URLs from npm/RubyGems registries
-- ✅ Fetches license information via GitHub API
+- ✅ Fetches license information via GitHub API and Debian Sources API
 - ✅ Validates license content against standard templates
 - ✅ Outputs UTF-8 with BOM CSV files (Excel compatible)
 - ✅ Displays processing progress
 - ✅ Detailed error reporting
 
-## Supported Languages
+## Supported Types
+
+### Application Packages
 
 | Language | Package Manager | Lock File | Registry |
 |----------|----------------|-----------|----------|
 | JavaScript / Node.js | Yarn | `yarn.lock` | npm Registry |
 | Ruby | Bundler | `Gemfile.lock` | RubyGems |
 
+### OS System Packages
+
+| OS Type | Package Manager | Input File | Data Source |
+|---------|----------------|------------|-------------|
+| Debian / Ubuntu | APT | `Dockerfile` | Debian Sources API / Tracker |
+
 ### Planned Support (Future)
 
-| Language | Package Manager | Lock File | Status |
-|----------|----------------|-----------|--------|
+| Type | Package Manager | File | Status |
+|------|----------------|------|--------|
 | JavaScript / Node.js | npm | `package-lock.json` | 🔜 Planned |
 | JavaScript / Node.js | pnpm | `pnpm-lock.yaml` | 🔜 Planned |
 | Python | Poetry | `poetry.lock` | 🔜 Planned |
 | Python | Pipenv | `Pipfile.lock` | 🔜 Planned |
 | PHP | Composer | `composer.lock` | 🔜 Planned |
+| Alpine Linux | APK | `Dockerfile` | 🔜 Planned |
 
 ## Requirements
 
@@ -41,7 +50,7 @@ A tool for generating Software Bill of Materials (SBOM) reports. Extracts packag
 
 ```bash
 # 1. Clone or download this project
-cd sbom_script
+cd sbom-generator
 
 # 2. Create virtual environment
 python3 -m venv venv
@@ -86,13 +95,15 @@ LICENSE_SIMILARITY_THRESHOLD: 0.9
 ## Directory Structure
 
 ```
-sbom_script/
-├── input_file/          # 📥 Place your lock files here
+sbom-generator/
+├── input_file/          # 📥 Place your lock files or Dockerfiles here
 │   ├── yarn.lock
 │   ├── package.json     # (Optional) For identifying direct dependencies
-│   └── Gemfile.lock
+│   ├── Gemfile.lock
+│   └── Dockerfile       # Dockerfile (Debian/Ubuntu supported)
 ├── output_file/         # 📤 Generated CSV reports
-│   └── yarn_sbom_20260108_120000.csv
+│   ├── yarn_sbom_app_20260108_120000.csv      # Application packages
+│   └── Dockerfile_sbom_os_20260108_120000.csv # OS system packages
 ├── config.yaml          # Configuration file (copy from config.yaml.example)
 ├── config.yaml.example  # Configuration template
 ├── main.py              # Main program
@@ -119,15 +130,17 @@ For `yarn.lock` files, you can optionally place the project's `package.json` in 
 # Activate virtual environment
 source venv/bin/activate
 
-# Method 1: Process all lock files in input_file/ directory
+# Method 1: Process all files in input_file/ directory
 python main.py
 
-# Method 2: Process a specific lock file
+# Method 2: Process a specific file
 python main.py input_file/yarn.lock
 python main.py input_file/Gemfile.lock
+python main.py input_file/Dockerfile
 
-# Method 3: Process lock file from any path
+# Method 3: Process file from any path
 python main.py /path/to/your/project/yarn.lock
+python main.py /path/to/your/project/Dockerfile
 ```
 
 ### Advanced Options
@@ -166,7 +179,9 @@ python main.py --clear-cache
 
 ## Output Format
 
-The generated CSV file contains the following columns:
+The generated CSV files are categorized into two types:
+
+### Application Packages (`*_sbom_app_*.csv`)
 
 | Column | Description |
 |--------|-------------|
@@ -177,13 +192,32 @@ The generated CSV file contains the following columns:
 | License URL | GitHub link to the license file |
 | Remarks | Exception notes (non-standard license, non-GitHub source, unable to fetch, etc.) |
 
+### OS System Packages (`*_sbom_os_*.csv`)
+
+| Column | Description |
+|--------|-------------|
+| Package Name | Package name |
+| Install Source | `[Direct Dependency]` indicates explicitly installed in Dockerfile |
+| Package URL | Debian Tracker URL |
+| License Name | License list parsed from debian/copyright |
+| License URL | debian/copyright file link |
+| VCS URL | Version Control System URL (e.g., Salsa GitLab) |
+| Remarks | Additional notes |
+
 ### Example Output
 
+**Application Packages:**
 ```csv
 Package Name,Referenced By,Repo URL,License Name,License URL,Remarks
 express,[Direct Dependency],https://github.com/expressjs/express,MIT License,https://github.com/expressjs/express/blob/master/LICENSE,
 lodash,[Direct Dependency],https://github.com/lodash/lodash,Other,https://github.com/lodash/lodash/blob/main/LICENSE,
-accepts,express,https://github.com/jshttp/accepts,MIT License,https://github.com/jshttp/accepts/blob/master/LICENSE,
+```
+
+**OS System Packages:**
+```csv
+Package Name,Install Source,Package URL,License Name,License URL,VCS URL,Remarks
+imagemagick,[Direct Dependency],https://tracker.debian.org/pkg/imagemagick,"ImageMagick
+GPL-2.0-or-later",https://sources.debian.org/.../copyright,https://salsa.debian.org/debian/imagemagick,
 ```
 
 ## Supported License Types
@@ -239,6 +273,7 @@ The "Remarks" column in the CSV may contain the following information:
 | `Non-GitHub source` | Repository is not hosted on GitHub |
 | `Unable to fetch` | Cannot retrieve information from registry or GitHub |
 | `License type could not be determined` | GitHub cannot identify the license type |
+| `Package not found in Debian sources` | Package not found in Debian Sources API |
 
 ## License
 
