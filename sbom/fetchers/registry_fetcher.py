@@ -1,5 +1,5 @@
 """
-Fetcher for package registry information (npm, RubyGems).
+Fetcher for package registry information (npm, RubyGems, Debian, Alpine).
 Used to retrieve repository URLs for packages.
 """
 
@@ -17,6 +17,9 @@ class RegistryFetcher:
     # API endpoints
     NPM_REGISTRY_URL = "https://registry.npmjs.org"
     RUBYGEMS_API_URL = "https://rubygems.org/api/v1/gems"
+    ALPINE_PACKAGES_URL = "https://pkgs.alpinelinux.org/package"
+    DEBIAN_PACKAGES_URL = "https://sources.debian.org/api/src"
+    DEBIAN_TRACKER_URL = "https://tracker.debian.org/pkg"
     
     # Request timeout in seconds
     TIMEOUT = 10
@@ -34,7 +37,7 @@ class RegistryFetcher:
         
         Args:
             package_name: Name of the package.
-            package_type: Type of package (NPM or RUBYGEMS).
+            package_type: Type of package (NPM, RUBYGEMS, APT, APK).
             
         Returns:
             RepoInfo object with repository URL and metadata.
@@ -46,6 +49,10 @@ class RegistryFetcher:
             return self._get_npm_repo_info(package_name)
         elif package_type == PackageType.RUBYGEMS:
             return self._get_rubygems_repo_info(package_name)
+        elif package_type == PackageType.APT:
+            return self._get_apt_repo_info(package_name)
+        elif package_type == PackageType.APK:
+            return self._get_apk_repo_info(package_name)
         else:
             raise ValueError(f"Unsupported package type: {package_type}")
     
@@ -138,6 +145,75 @@ class RegistryFetcher:
             
         except requests.RequestException as e:
             raise ValueError(f"Failed to fetch RubyGems package info: {e}")
+    
+    def _get_apt_repo_info(self, package_name: str) -> RepoInfo:
+        """Get repository info for Debian/Ubuntu package."""
+        # Try Debian sources API first
+        url = f"{self.DEBIAN_PACKAGES_URL}/{package_name}"
+        
+        try:
+            response = self._session.get(url, timeout=self.TIMEOUT)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if package exists
+                if data.get("package"):
+                    # Build Debian tracker URL as the main reference
+                    tracker_url = f"{self.DEBIAN_TRACKER_URL}/{package_name}"
+                    
+                    # Try to find VCS (Version Control System) URL
+                    versions = data.get("versions", [])
+                    for version_info in versions:
+                        if isinstance(version_info, dict):
+                            # Check for VCS fields
+                            vcs_git = version_info.get("vcs_git", "")
+                            vcs_browser = version_info.get("vcs_browser", "")
+                            
+                            if vcs_git and "github.com" in vcs_git:
+                                return RepoInfo.from_github_url(vcs_git)
+                            if vcs_browser and "github.com" in vcs_browser:
+                                return RepoInfo.from_github_url(vcs_browser)
+                    
+                    # Return Debian tracker URL as fallback
+                    return RepoInfo(url=tracker_url, is_github=False)
+            
+            # Package not found - return empty info
+            return RepoInfo(url="", is_github=False)
+            
+        except requests.RequestException:
+            # Return Debian tracker URL as best effort
+            tracker_url = f"{self.DEBIAN_TRACKER_URL}/{package_name}"
+            return RepoInfo(url=tracker_url, is_github=False)
+    
+    def _get_apk_repo_info(self, package_name: str) -> RepoInfo:
+        """Get repository info for Alpine package."""
+        # Alpine packages API endpoint
+        # Try edge/main first, then edge/community
+        branches = ["edge", "v3.19", "v3.18"]
+        repos = ["main", "community"]
+        
+        for branch in branches:
+            for repo in repos:
+                url = f"https://pkgs.alpinelinux.org/package/{branch}/{repo}/x86_64/{package_name}"
+                
+                try:
+                    # Alpine doesn't have a JSON API, so we'll use the HTML page URL
+                    response = self._session.head(url, timeout=self.TIMEOUT, allow_redirects=True)
+                    
+                    if response.status_code == 200:
+                        # Package exists - try to get more info from GitLab/GitHub
+                        gitlab_url = f"https://gitlab.alpinelinux.org/alpine/aports/-/tree/master/{repo}/{package_name}"
+                        
+                        return RepoInfo(
+                            url=gitlab_url,
+                            is_github=False
+                        )
+                except requests.RequestException:
+                    continue
+        
+        # Package not found in any branch/repo
+        return RepoInfo(url="", is_github=False)
     
     def close(self):
         """Close the HTTP session."""
