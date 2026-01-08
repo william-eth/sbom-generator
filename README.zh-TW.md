@@ -1,8 +1,8 @@
-# SBOM Script
+# SBOM Generator
 
 [English Version](README.md)
 
-一個用於生成軟體物料清單（Software Bill of Materials, SBOM）報告的工具。支援從 `yarn.lock` 和 `Gemfile.lock` 檔案中提取所有套件的依賴關係、Repository URL 和 License 資訊。
+一個用於生成軟體物料清單（Software Bill of Materials, SBOM）報告的工具。支援從 Lock 檔案和 Dockerfile 中提取所有套件的依賴關係、Repository URL 和 License 資訊。
 
 ## 功能特點
 
@@ -15,22 +15,31 @@
 - ✅ 顯示處理進度
 - ✅ 詳細的錯誤報告
 
-## 支援的語言
+## 支援的類型
+
+### 應用程式套件
 
 | 語言 | 套件管理器 | Lock 檔案 | Registry |
 |-----|-----------|----------|----------|
 | JavaScript / Node.js | Yarn | `yarn.lock` | npm Registry |
 | Ruby | Bundler | `Gemfile.lock` | RubyGems |
 
+### OS 系統套件
+
+| OS 類型 | 套件管理器 | 輸入檔案 | 資料來源 |
+|--------|-----------|---------|----------|
+| Debian / Ubuntu | APT | `Dockerfile` | Debian Sources API / Tracker |
+
 ### 計畫支援（未來）
 
-| 語言 | 套件管理器 | Lock 檔案 | 狀態 |
-|-----|-----------|----------|------|
+| 類型 | 套件管理器 | 檔案 | 狀態 |
+|-----|-----------|-----|------|
 | JavaScript / Node.js | npm | `package-lock.json` | 🔜 計畫中 |
 | JavaScript / Node.js | pnpm | `pnpm-lock.yaml` | 🔜 計畫中 |
 | Python | Poetry | `poetry.lock` | 🔜 計畫中 |
 | Python | Pipenv | `Pipfile.lock` | 🔜 計畫中 |
 | PHP | Composer | `composer.lock` | 🔜 計畫中 |
+| Alpine Linux | APK | `Dockerfile` | 🔜 計畫中 |
 
 ## 系統需求
 
@@ -41,7 +50,7 @@
 
 ```bash
 # 1. Clone 或下載此專案
-cd sbom_script
+cd sbom-generator
 
 # 2. 建立虛擬環境
 python3 -m venv venv
@@ -86,13 +95,15 @@ LICENSE_SIMILARITY_THRESHOLD: 0.9
 ## 目錄結構
 
 ```
-sbom_script/
-├── input_file/          # 📥 放入您的 lock 檔案
+sbom-generator/
+├── input_file/          # 📥 放入您的 lock 檔案或 Dockerfile
 │   ├── yarn.lock
 │   ├── package.json     # (選用) 用於識別直接依賴
-│   └── Gemfile.lock
+│   ├── Gemfile.lock
+│   └── Dockerfile       # Dockerfile (支援 Debian/Ubuntu)
 ├── output_file/         # 📤 產出的 CSV 報告
-│   └── yarn_sbom_20260108_120000.csv
+│   ├── yarn_sbom_app_20260108_120000.csv    # 應用程式套件
+│   └── Dockerfile_sbom_os_20260108_120000.csv  # OS 系統套件
 ├── config.yaml          # 設定檔（請從 config.yaml.example 複製）
 ├── config.yaml.example  # 設定檔範例
 ├── main.py              # 主程式
@@ -119,15 +130,17 @@ sbom_script/
 # 啟動虛擬環境
 source venv/bin/activate
 
-# 方法 1: 處理 input_file/ 目錄下的所有 lock 檔案
+# 方法 1: 處理 input_file/ 目錄下的所有檔案
 python main.py
 
-# 方法 2: 處理指定的 lock 檔案
+# 方法 2: 處理指定的檔案
 python main.py input_file/yarn.lock
 python main.py input_file/Gemfile.lock
+python main.py input_file/Dockerfile
 
-# 方法 3: 處理任意路徑的 lock 檔案
+# 方法 3: 處理任意路徑的檔案
 python main.py /path/to/your/project/yarn.lock
+python main.py /path/to/your/project/Dockerfile
 ```
 
 ### 進階選項
@@ -166,7 +179,9 @@ python main.py --clear-cache
 
 ## 輸出格式
 
-輸出的 CSV 檔案包含以下欄位：
+輸出的 CSV 檔案依類型分為兩種：
+
+### 應用程式套件 (`*_sbom_app_*.csv`)
 
 | 欄位 | 說明 |
 |------|------|
@@ -177,13 +192,32 @@ python main.py --clear-cache
 | License URL | License 檔案的 GitHub 連結 |
 | 備註 | 異常說明（非標準 License、非 GitHub 來源、無法取得等） |
 
+### OS 系統套件 (`*_sbom_os_*.csv`)
+
+| 欄位 | 說明 |
+|------|------|
+| 套件名稱 | Package name |
+| 安裝來源 | `[直接依賴]` 表示在 Dockerfile 中明確安裝 |
+| 套件 URL | Debian Tracker URL |
+| License 名稱 | 從 debian/copyright 解析的 License 列表 |
+| License URL | debian/copyright 檔案連結 |
+| VCS URL | 版本控制系統 URL（如 Salsa GitLab） |
+| 備註 | 其他說明 |
+
 ### 範例輸出
 
+**應用程式套件：**
 ```csv
 套件名稱,引用套件名稱,套件 Repo URL,License 名稱,License URL,備註
 express,[直接依賴],https://github.com/expressjs/express,MIT License,https://github.com/expressjs/express/blob/master/LICENSE,
 lodash,[直接依賴],https://github.com/lodash/lodash,Other,https://github.com/lodash/lodash/blob/main/LICENSE,
-accepts,express,https://github.com/jshttp/accepts,MIT License,https://github.com/jshttp/accepts/blob/master/LICENSE,
+```
+
+**OS 系統套件：**
+```csv
+套件名稱,安裝來源,套件 URL,License 名稱,License URL,VCS URL,備註
+imagemagick,[直接依賴],https://tracker.debian.org/pkg/imagemagick,"ImageMagick
+GPL-2.0-or-later",https://sources.debian.org/.../copyright,https://salsa.debian.org/debian/imagemagick,
 ```
 
 ## 支援的 License 類型

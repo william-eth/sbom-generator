@@ -199,6 +199,88 @@ class Cache:
         }
         self._dirty = True
     
+    def get_source_package(self, binary_package: str) -> Optional[str]:
+        """
+        Get cached source package name for a Debian binary package.
+        
+        Args:
+            binary_package: Name of the binary package.
+            
+        Returns:
+            Cached source package name or None if not found/expired.
+        """
+        if not self.enabled:
+            return None
+        
+        key = f"debian_source:{binary_package}"
+        entry = self._cache.get(key)
+        
+        if entry and not self._is_expired(entry.get("timestamp", "")):
+            return entry.get("source_package")
+        
+        return None
+    
+    def set_source_package(self, binary_package: str, source_package: str) -> None:
+        """
+        Cache source package name for a Debian binary package.
+        
+        Args:
+            binary_package: Name of the binary package.
+            source_package: Name of the source package.
+        """
+        if not self.enabled:
+            return
+        
+        key = f"debian_source:{binary_package}"
+        
+        self._cache[key] = {
+            "source_package": source_package,
+            "timestamp": datetime.now().isoformat()
+        }
+        self._dirty = True
+    
+    def get_vcs_info(self, package_name: str) -> Optional[dict]:
+        """
+        Get cached VCS (Version Control System) info for a Debian package.
+        
+        Args:
+            package_name: Name of the package.
+            
+        Returns:
+            Cached VCS info dict or None if not found/expired.
+        """
+        if not self.enabled:
+            return None
+        
+        key = f"debian_vcs:{package_name}"
+        entry = self._cache.get(key)
+        
+        if entry and not self._is_expired(entry.get("timestamp", "")):
+            vcs_data = entry.get("vcs_info")
+            if vcs_data:
+                return vcs_data
+        
+        return None
+    
+    def set_vcs_info(self, package_name: str, vcs_info: dict) -> None:
+        """
+        Cache VCS info for a Debian package.
+        
+        Args:
+            package_name: Name of the package.
+            vcs_info: VCS info dictionary with url, browser, type keys.
+        """
+        if not self.enabled:
+            return
+        
+        key = f"debian_vcs:{package_name}"
+        
+        self._cache[key] = {
+            "vcs_info": vcs_info,
+            "timestamp": datetime.now().isoformat()
+        }
+        self._dirty = True
+    
     def clear(self) -> None:
         """Clear all cache entries."""
         self._cache = {}
