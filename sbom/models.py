@@ -7,10 +7,26 @@ from enum import Enum
 from typing import Optional
 
 
+class SBOMCategory(Enum):
+    """Category of SBOM based on the source type."""
+    APPLICATION = "application"  # Application-level packages (npm, rubygems)
+    OS_SYSTEM = "os_system"      # OS-level system packages (apt, apk)
+
+
 class PackageType(Enum):
     """Type of package based on the lock file source."""
     NPM = "npm"           # From yarn.lock or package-lock.json
     RUBYGEMS = "rubygems" # From Gemfile.lock
+    APT = "apt"           # From Dockerfile (Debian/Ubuntu apt-get)
+    APK = "apk"           # From Dockerfile (Alpine apk)
+    
+    @property
+    def category(self) -> SBOMCategory:
+        """Get the SBOM category for this package type."""
+        if self in (PackageType.NPM, PackageType.RUBYGEMS):
+            return SBOMCategory.APPLICATION
+        else:
+            return SBOMCategory.OS_SYSTEM
 
 
 @dataclass
@@ -98,6 +114,7 @@ class SBOMEntry:
     license_name: str
     license_url: str
     remark: str = ""
+    vcs_url: str = ""  # VCS (Version Control System) URL for OS-level packages
 
 
 @dataclass
