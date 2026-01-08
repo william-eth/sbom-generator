@@ -8,14 +8,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from ..models import SBOMEntry
+from ..models import SBOMCategory, SBOMEntry
 
 
 class CSVWriter:
     """Writes SBOM entries to CSV file."""
     
-    # CSV column headers
-    HEADERS = [
+    # CSV column headers for different SBOM categories
+    APPLICATION_HEADERS = [
         "套件名稱",
         "引用套件名稱",
         "套件 Repo URL",
@@ -23,6 +23,19 @@ class CSVWriter:
         "License URL",
         "備註",
     ]
+    
+    OS_SYSTEM_HEADERS = [
+        "套件名稱",
+        "安裝來源",
+        "套件 URL",
+        "License 名稱",
+        "License URL",
+        "VCS URL",
+        "備註",
+    ]
+    
+    # Legacy headers (for backward compatibility)
+    HEADERS = APPLICATION_HEADERS
     
     # UTF-8 BOM for Excel compatibility
     UTF8_BOM = "\ufeff"
@@ -42,7 +55,8 @@ class CSVWriter:
         self,
         entries: list[SBOMEntry],
         filename: Optional[str] = None,
-        filename_prefix: Optional[str] = None
+        filename_prefix: Optional[str] = None,
+        category: Optional[SBOMCategory] = None
     ) -> Path:
         """
         Write SBOM entries to CSV file.
@@ -51,6 +65,7 @@ class CSVWriter:
             entries: List of SBOMEntry objects to write.
             filename: Optional filename. Auto-generated if not provided.
             filename_prefix: Optional prefix for auto-generated filename.
+            category: SBOM category for selecting appropriate headers.
             
         Returns:
             Path to the written CSV file.
@@ -58,9 +73,24 @@ class CSVWriter:
         if filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             prefix = f"{filename_prefix}_" if filename_prefix else ""
-            filename = f"{prefix}sbom_{timestamp}.csv"
+            
+            # Add category suffix for clarity
+            if category == SBOMCategory.OS_SYSTEM:
+                category_suffix = "_os"
+            elif category == SBOMCategory.APPLICATION:
+                category_suffix = "_app"
+            else:
+                category_suffix = ""
+            
+            filename = f"{prefix}sbom{category_suffix}_{timestamp}.csv"
         
         output_path = self.output_dir / filename
+        
+        # Select headers based on category
+        if category == SBOMCategory.OS_SYSTEM:
+            headers = self.OS_SYSTEM_HEADERS
+        else:
+            headers = self.APPLICATION_HEADERS
         
         with open(output_path, "w", encoding="utf-8", newline="") as f:
             # Write UTF-8 BOM
@@ -69,18 +99,31 @@ class CSVWriter:
             writer = csv.writer(f)
             
             # Write headers
-            writer.writerow(self.HEADERS)
+            writer.writerow(headers)
             
             # Write data rows
             for entry in entries:
-                writer.writerow([
-                    entry.package_name,
-                    entry.referenced_by,
-                    entry.repo_url,
-                    entry.license_name,
-                    entry.license_url,
-                    entry.remark,
-                ])
+                if category == SBOMCategory.OS_SYSTEM:
+                    # OS-level packages include VCS URL column
+                    writer.writerow([
+                        entry.package_name,
+                        entry.referenced_by,
+                        entry.repo_url,
+                        entry.license_name,
+                        entry.license_url,
+                        entry.vcs_url,
+                        entry.remark,
+                    ])
+                else:
+                    # Application-level packages
+                    writer.writerow([
+                        entry.package_name,
+                        entry.referenced_by,
+                        entry.repo_url,
+                        entry.license_name,
+                        entry.license_url,
+                        entry.remark,
+                    ])
         
         return output_path
     
