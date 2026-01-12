@@ -8,7 +8,7 @@ A tool for generating Software Bill of Materials (SBOM) reports. Extracts packag
 
 - ✅ Supports multiple package managers (see [Supported Types](#supported-types))
 - ✅ Builds complete dependency graphs
-- ✅ Queries repository URLs from npm/RubyGems registries
+- ✅ Queries repository URLs from npm/RubyGems/PyPI registries
 - ✅ Fetches license information via GitHub API and Debian Sources API
 - ✅ Validates license content against standard templates
 - ✅ Outputs UTF-8 with BOM CSV files (Excel compatible)
@@ -19,10 +19,11 @@ A tool for generating Software Bill of Materials (SBOM) reports. Extracts packag
 
 ### Application Packages
 
-| Language | Package Manager | Lock File | Registry |
-|----------|----------------|-----------|----------|
+| Language | Package Manager | File | Registry |
+|----------|----------------|------|----------|
 | JavaScript / Node.js | Yarn | `yarn.lock` | npm Registry |
 | Ruby | Bundler | `Gemfile.lock` | RubyGems |
+| Python | pip | `requirements.txt` | PyPI |
 
 ### OS System Packages
 
@@ -38,13 +39,14 @@ A tool for generating Software Bill of Materials (SBOM) reports. Extracts packag
 | JavaScript / Node.js | pnpm | `pnpm-lock.yaml` | 🔜 Planned |
 | Python | Poetry | `poetry.lock` | 🔜 Planned |
 | Python | Pipenv | `Pipfile.lock` | 🔜 Planned |
+| Python | uv | `uv.lock` | 🔜 Planned |
 | PHP | Composer | `composer.lock` | 🔜 Planned |
 | Alpine Linux | APK | `Dockerfile` | 🔜 Planned |
 
 ## Requirements
 
-- Python 3.9+
-- Internet connection (for querying npm/RubyGems registries and GitHub API)
+- Python 3.10+
+- Internet connection (for querying npm/RubyGems/PyPI registries and GitHub API)
 
 ## Installation
 
@@ -96,18 +98,27 @@ LICENSE_SIMILARITY_THRESHOLD: 0.9
 
 ```
 sbom-generator/
+├── .github/workflows/   # 🔄 GitHub Actions CI/CD
+│   └── test.yml         # Test workflow
 ├── input_file/          # 📥 Place your lock files or Dockerfiles here
 │   ├── yarn.lock
 │   ├── package.json     # (Optional) For identifying direct dependencies
 │   ├── Gemfile.lock
+│   ├── requirements.txt # Python pip dependencies file
 │   └── Dockerfile       # Dockerfile (Debian/Ubuntu supported)
 ├── output_file/         # 📤 Generated CSV reports
-│   ├── yarn_sbom_app_20260108_120000.csv      # Application packages
-│   └── Dockerfile_sbom_os_20260108_120000.csv # OS system packages
+│   ├── yarn_sbom_app_yyyymmdd_hhmmss.csv         # Application packages
+│   ├── requirements_sbom_app_yyyymmdd_hhmmss.csv # Python packages
+│   └── Dockerfile_sbom_os_yyyymmdd_hhmmss.csv    # OS system packages
+├── tests/               # 🧪 Test code
+│   ├── fixtures/        # Test fixture files
+│   ├── test_models.py   # Data model tests
+│   ├── test_parsers.py  # Parser tests
+│   └── test_output.py   # CSV output tests
 ├── config.yaml          # Configuration file (copy from config.yaml.example)
 ├── config.yaml.example  # Configuration template
 ├── main.py              # Main program
-├── requirements.txt     # Python dependencies
+├── requirements.txt     # Python dependencies (for this tool)
 └── sbom/                # Program modules
 ```
 
@@ -121,6 +132,18 @@ For `yarn.lock` files, you can optionally place the project's `package.json` in 
 | ✅ Shows which packages reference each package | ✅ Shows which packages reference each package |
 
 **Recommendation**: If you need to distinguish between direct and transitive dependencies in the report, place `package.json` alongside `yarn.lock`.
+
+### About requirements.txt
+
+Python's `requirements.txt` does not contain dependency relationship information, therefore:
+
+| Feature | Description |
+|---------|-------------|
+| Direct Dependencies | All packages in the file are marked as `[Direct Dependency]` |
+| Transitive Dependencies | Cannot be identified (requirements.txt doesn't record dependency tree) |
+| Version Info | Extracted from version specifiers (e.g., `>=2.28.0` → `2.28.0`) |
+
+**Note**: For complete dependency tree analysis, consider using `poetry.lock` or `Pipfile.lock` (planned for future support).
 
 ## Usage
 
@@ -136,10 +159,12 @@ python main.py
 # Method 2: Process a specific file
 python main.py input_file/yarn.lock
 python main.py input_file/Gemfile.lock
+python main.py input_file/requirements.txt
 python main.py input_file/Dockerfile
 
 # Method 3: Process file from any path
 python main.py /path/to/your/project/yarn.lock
+python main.py /path/to/your/project/requirements.txt
 python main.py /path/to/your/project/Dockerfile
 ```
 
@@ -274,6 +299,27 @@ The "Remarks" column in the CSV may contain the following information:
 | `Unable to fetch` | Cannot retrieve information from registry or GitHub |
 | `License type could not be determined` | GitHub cannot identify the license type |
 | `Package not found in Debian sources` | Package not found in Debian Sources API |
+
+## Development
+
+### Running Tests
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run tests
+pytest tests/ -v
+```
+
+### Test Fixtures
+
+Test fixture files are located in `tests/fixtures/`:
+- `yarn.lock` - JavaScript/Node.js test file
+- `package.json` - npm direct dependency definition
+- `Gemfile.lock` - Ruby test file
+- `requirements.txt` - Python test file
+- `Dockerfile` - Debian-based Dockerfile test file
 
 ## License
 

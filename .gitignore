@@ -36,10 +36,11 @@ ENV/
 # Configuration (contains sensitive data like tokens)
 config.yaml
 
-# Input files (user-provided lock files and Dockerfiles)
+# Input files (user-provided lock files, requirements and Dockerfiles)
 input_file/*.lock
 input_file/package.json
 input_file/Gemfile
+input_file/requirements.txt
 input_file/Dockerfile
 input_file/Dockerfile_*
 input_file/Dockerfile.*
@@ -54,6 +55,9 @@ sbom_cache.json
 .DS_Store
 Thumbs.db
 
-# Test files
-test_*/
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+*.pytest_cache
 

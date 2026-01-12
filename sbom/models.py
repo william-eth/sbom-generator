@@ -17,13 +17,14 @@ class PackageType(Enum):
     """Type of package based on the lock file source."""
     NPM = "npm"           # From yarn.lock or package-lock.json
     RUBYGEMS = "rubygems" # From Gemfile.lock
+    PYPI = "pypi"         # From requirements.txt
     APT = "apt"           # From Dockerfile (Debian/Ubuntu apt-get)
     APK = "apk"           # From Dockerfile (Alpine apk)
     
     @property
     def category(self) -> SBOMCategory:
         """Get the SBOM category for this package type."""
-        if self in (PackageType.NPM, PackageType.RUBYGEMS):
+        if self in (PackageType.NPM, PackageType.RUBYGEMS, PackageType.PYPI):
             return SBOMCategory.APPLICATION
         else:
             return SBOMCategory.OS_SYSTEM

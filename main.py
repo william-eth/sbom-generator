@@ -4,20 +4,21 @@ SBOM (Software Bill of Materials) Generator
 
 A tool to generate SBOM reports from lock files and Dockerfiles.
 Supports:
-  - Application-level packages: yarn.lock, Gemfile.lock
+  - Application-level packages: yarn.lock, Gemfile.lock, requirements.txt
   - OS-level packages: Dockerfile (apt, apk)
 
 Usage:
     python main.py                           # Process all files in input_file/
     python main.py <lock_file_path>          # Process specific file
     python main.py input_file/yarn.lock      # Process file from input folder
+    python main.py input_file/requirements.txt  # Process Python requirements
     python main.py --cache                   # Use cached data
     python main.py --no-cache                # Ignore cache
     python main.py --clear-cache             # Clear cache and exit
 
 Output:
     CSV files saved to output_file/ directory:
-    - *_sbom_app_*.csv  : Application-level packages (npm, rubygems)
+    - *_sbom_app_*.csv  : Application-level packages (npm, rubygems, pypi)
     - *_sbom_os_*.csv   : OS-level packages (apt, apk)
 """
 
@@ -43,7 +44,7 @@ from sbom.models import (
     SBOMEntry,
 )
 from sbom.output import CSVWriter
-from sbom.parsers import GemfileParser, YarnParser, DockerfileParser
+from sbom.parsers import GemfileParser, YarnParser, DockerfileParser, RequirementsParser
 from sbom.processor import PackageProcessor
 
 
@@ -87,17 +88,20 @@ def get_parser(file_path: Path):
     yarn_parser = YarnParser()
     gemfile_parser = GemfileParser()
     dockerfile_parser = DockerfileParser()
+    requirements_parser = RequirementsParser()
     
     if yarn_parser.can_parse(file_path):
         return yarn_parser
     elif gemfile_parser.can_parse(file_path):
         return gemfile_parser
+    elif requirements_parser.can_parse(file_path):
+        return requirements_parser
     elif dockerfile_parser.can_parse(file_path):
         return dockerfile_parser
     else:
         raise ValueError(
             f"Unsupported file type: {file_path.name}\n"
-            "Supported files: yarn.lock, Gemfile.lock, Dockerfile"
+            "Supported files: yarn.lock, Gemfile.lock, requirements.txt, Dockerfile"
         )
 
 
@@ -155,11 +159,11 @@ def find_input_files(input_dir: Path) -> list[Path]:
     Returns:
         List of paths to supported files.
     """
-    supported_files = ["yarn.lock", "Gemfile.lock"]
+    supported_files = ["yarn.lock", "Gemfile.lock", "requirements.txt"]
     input_files = []
     
     if input_dir.exists():
-        # Look for lock files
+        # Look for lock files and requirements files
         for filename in supported_files:
             file_path = input_dir / filename
             if file_path.exists():
@@ -290,12 +294,13 @@ Directories:
     Output: {DEFAULT_OUTPUT_DIR}
 
 Output File Types:
-    *_sbom_app_*.csv  : Application-level packages (npm, rubygems)
+    *_sbom_app_*.csv  : Application-level packages (npm, rubygems, pypi)
     *_sbom_os_*.csv   : OS-level packages (apt, apk)
 
 Examples:
     python main.py                              # Process all files in input_file/
     python main.py input_file/yarn.lock         # Process specific file
+    python main.py input_file/requirements.txt  # Process Python requirements
     python main.py input_file/Dockerfile        # Process Dockerfile
     python main.py --cache                      # Use cached data (default)
     python main.py --no-cache                   # Ignore cache, fetch fresh data
@@ -306,7 +311,7 @@ Examples:
         "input_file",
         nargs="?",
         default=None,
-        help="Path to input file (yarn.lock, Gemfile.lock, or Dockerfile). If not provided, processes all files in input_file/"
+        help="Path to input file (yarn.lock, Gemfile.lock, requirements.txt, or Dockerfile). If not provided, processes all files in input_file/"
     )
     parser.add_argument(
         "--output", "-o",
@@ -361,7 +366,7 @@ Examples:
         input_files = find_input_files(DEFAULT_INPUT_DIR)
         if not input_files:
             print(f"Error: No supported files found in {DEFAULT_INPUT_DIR}")
-            print("Please place yarn.lock, Gemfile.lock, or Dockerfile in the input_file/ directory")
+            print("Please place yarn.lock, Gemfile.lock, requirements.txt, or Dockerfile in the input_file/ directory")
             sys.exit(1)
         print(f"📂 Found {len(input_files)} file(s) in {DEFAULT_INPUT_DIR}")
         for f in input_files:
