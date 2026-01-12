@@ -6,6 +6,13 @@ from .base_parser import BaseParser
 from .yarn_parser import YarnParser
 from .gemfile_parser import GemfileParser
 from .dockerfile_parser import DockerfileParser
+from .requirements_parser import RequirementsParser
 
-__all__ = ["BaseParser", "YarnParser", "GemfileParser", "DockerfileParser"]
+__all__ = [
+    "BaseParser",
+    "YarnParser",
+    "GemfileParser",
+    "DockerfileParser",
+    "RequirementsParser",
+]
 

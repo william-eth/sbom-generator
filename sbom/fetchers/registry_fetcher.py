@@ -1,5 +1,5 @@
 """
-Fetcher for package registry information (npm, RubyGems, Debian, Alpine).
+Fetcher for package registry information (npm, RubyGems, PyPI, Debian, Alpine).
 Used to retrieve repository URLs for packages.
 """
 
@@ -17,6 +17,7 @@ class RegistryFetcher:
     # API endpoints
     NPM_REGISTRY_URL = "https://registry.npmjs.org"
     RUBYGEMS_API_URL = "https://rubygems.org/api/v1/gems"
+    PYPI_API_URL = "https://pypi.org/pypi"
     ALPINE_PACKAGES_URL = "https://pkgs.alpinelinux.org/package"
     DEBIAN_PACKAGES_URL = "https://sources.debian.org/api/src"
     DEBIAN_TRACKER_URL = "https://tracker.debian.org/pkg"
@@ -37,7 +38,7 @@ class RegistryFetcher:
         
         Args:
             package_name: Name of the package.
-            package_type: Type of package (NPM, RUBYGEMS, APT, APK).
+            package_type: Type of package (NPM, RUBYGEMS, PYPI, APT, APK).
             
         Returns:
             RepoInfo object with repository URL and metadata.
@@ -49,6 +50,8 @@ class RegistryFetcher:
             return self._get_npm_repo_info(package_name)
         elif package_type == PackageType.RUBYGEMS:
             return self._get_rubygems_repo_info(package_name)
+        elif package_type == PackageType.PYPI:
+            return self._get_pypi_repo_info(package_name)
         elif package_type == PackageType.APT:
             return self._get_apt_repo_info(package_name)
         elif package_type == PackageType.APK:
@@ -145,6 +148,64 @@ class RegistryFetcher:
             
         except requests.RequestException as e:
             raise ValueError(f"Failed to fetch RubyGems package info: {e}")
+    
+    def _get_pypi_repo_info(self, package_name: str) -> RepoInfo:
+        """Get repository info from PyPI API."""
+        # Normalize package name for PyPI API (PEP 503)
+        normalized_name = re.sub(r'[-_.]+', '-', package_name.lower())
+        url = f"{self.PYPI_API_URL}/{normalized_name}/json"
+        
+        try:
+            response = self._session.get(url, timeout=self.TIMEOUT)
+            response.raise_for_status()
+            data = response.json()
+            
+            info = data.get("info", {})
+            
+            # Try project_urls first (most reliable)
+            project_urls = info.get("project_urls") or {}
+            
+            # Priority order for GitHub URLs
+            url_keys_priority = [
+                "Source",
+                "Source Code",
+                "Repository",
+                "Code",
+                "GitHub",
+                "Homepage",
+                "Home",
+            ]
+            
+            for key in url_keys_priority:
+                for url_key, url_value in project_urls.items():
+                    if url_key.lower() == key.lower() and url_value:
+                        if "github.com" in url_value:
+                            return RepoInfo.from_github_url(url_value)
+            
+            # Check all project_urls for any GitHub link
+            for url_value in project_urls.values():
+                if url_value and "github.com" in url_value:
+                    return RepoInfo.from_github_url(url_value)
+            
+            # Fallback to home_page
+            home_page = info.get("home_page", "")
+            if home_page:
+                if "github.com" in home_page:
+                    return RepoInfo.from_github_url(home_page)
+                # Return non-GitHub homepage
+                return RepoInfo(url=home_page, is_github=False)
+            
+            # Fallback to project_url (PyPI page)
+            project_url = info.get("project_url", "")
+            if project_url:
+                return RepoInfo(url=project_url, is_github=False)
+            
+            # Last resort: return PyPI page URL
+            pypi_url = f"https://pypi.org/project/{normalized_name}/"
+            return RepoInfo(url=pypi_url, is_github=False)
+            
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to fetch PyPI package info: {e}")
     
     def _get_apt_repo_info(self, package_name: str) -> RepoInfo:
         """Get repository info for Debian/Ubuntu package."""
