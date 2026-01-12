@@ -1,5 +1,40 @@
 # Release Notes
 
+## Version 3.0.0 (2026-01-13)
+
+### New Features
+
+#### Python requirements.txt Support
+- **New parser**: Parse Python `requirements.txt` files to extract package dependencies
+- **PyPI Registry**: Fetch repository URLs from PyPI JSON API
+- **Version specifiers**: Support for `==`, `>=`, `<=`, `>`, `<`, `~=`, `!=` operators
+- **Extras support**: Handle packages with extras like `package[extra1,extra2]`
+- **Environment markers**: Parse and skip environment markers (`;` syntax)
+- **Smart skip**: Automatically skip special pip options (`-r`, `-e`, `--index-url`, etc.)
+
+#### Test Suite
+- **Comprehensive testing**: 50 test cases covering models, parsers, and CSV output
+- **Test fixtures**: Minimal, sanitized test files for all supported formats
+- **pytest integration**: Full pytest configuration with markers support
+
+#### CI/CD
+- **GitHub Actions**: Automated testing on push and pull requests
+- **Python matrix**: Tests run on Python 3.9, 3.10, 3.11, and 3.12
+- **Dependency caching**: Faster CI runs with pip cache
+
+### Improvements
+
+- **Documentation**: Updated README with Python support and testing instructions
+- **Directory structure**: Cleaner organization with dedicated test directories
+
+### Technical Notes
+
+- `requirements.txt` does not record dependency relationships
+- All packages in requirements.txt are marked as `[直接依賴]` (direct dependency)
+- For complete dependency tree analysis, `poetry.lock` and `Pipfile.lock` support is planned
+
+---
+
 ## Version 2.0.0 (2026-01-09)
 
 ### New Features

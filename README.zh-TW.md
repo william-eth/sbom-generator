@@ -8,7 +8,7 @@
 
 - ✅ 支援多種套件管理器（請參閱[支援的語言](#支援的語言)）
 - ✅ 自動建立完整的依賴關係圖
-- ✅ 從 npm/RubyGems registry 查詢 Repository URL
+- ✅ 從 npm/RubyGems/PyPI registry 查詢 Repository URL
 - ✅ 從 GitHub API 取得 License 資訊
 - ✅ 驗證 License 內容是否符合標準模板
 - ✅ 輸出 UTF-8 with BOM 的 CSV 檔案（Excel 相容）
@@ -19,10 +19,11 @@
 
 ### 應用程式套件
 
-| 語言 | 套件管理器 | Lock 檔案 | Registry |
-|-----|-----------|----------|----------|
+| 語言 | 套件管理器 | 檔案 | Registry |
+|-----|-----------|------|----------|
 | JavaScript / Node.js | Yarn | `yarn.lock` | npm Registry |
 | Ruby | Bundler | `Gemfile.lock` | RubyGems |
+| Python | pip | `requirements.txt` | PyPI |
 
 ### OS 系統套件
 
@@ -38,13 +39,14 @@
 | JavaScript / Node.js | pnpm | `pnpm-lock.yaml` | 🔜 計畫中 |
 | Python | Poetry | `poetry.lock` | 🔜 計畫中 |
 | Python | Pipenv | `Pipfile.lock` | 🔜 計畫中 |
+| Python | uv | `uv.lock` | 🔜 計畫中 |
 | PHP | Composer | `composer.lock` | 🔜 計畫中 |
 | Alpine Linux | APK | `Dockerfile` | 🔜 計畫中 |
 
 ## 系統需求
 
 - Python 3.9+
-- 網路連線（用於查詢 npm/RubyGems registry 和 GitHub API）
+- 網路連線（用於查詢 npm/RubyGems/PyPI registry 和 GitHub API）
 
 ## 安裝
 
@@ -96,18 +98,27 @@ LICENSE_SIMILARITY_THRESHOLD: 0.9
 
 ```
 sbom-generator/
+├── .github/workflows/   # 🔄 GitHub Actions CI/CD
+│   └── test.yml         # 測試工作流程
 ├── input_file/          # 📥 放入您的 lock 檔案或 Dockerfile
 │   ├── yarn.lock
 │   ├── package.json     # (選用) 用於識別直接依賴
 │   ├── Gemfile.lock
+│   ├── requirements.txt # Python pip 依賴檔案
 │   └── Dockerfile       # Dockerfile (支援 Debian/Ubuntu)
 ├── output_file/         # 📤 產出的 CSV 報告
-│   ├── yarn_sbom_app_20260108_120000.csv    # 應用程式套件
-│   └── Dockerfile_sbom_os_20260108_120000.csv  # OS 系統套件
+│   ├── yarn_sbom_app_yyyymmdd_hhmmss.csv         # 應用程式套件
+│   ├── requirements_sbom_app_yyyymmdd_hhmmss.csv # Python 套件
+│   └── Dockerfile_sbom_os_yyyymmdd_hhmmss.csv    # OS 系統套件
+├── tests/               # 🧪 測試程式碼
+│   ├── fixtures/        # 測試用的 fixture 檔案
+│   ├── test_models.py   # 資料模型測試
+│   ├── test_parsers.py  # 解析器測試
+│   └── test_output.py   # CSV 輸出測試
 ├── config.yaml          # 設定檔（請從 config.yaml.example 複製）
 ├── config.yaml.example  # 設定檔範例
 ├── main.py              # 主程式
-├── requirements.txt     # Python 依賴
+├── requirements.txt     # Python 依賴（本工具使用）
 └── sbom/                # 程式模組
 ```
 
@@ -121,6 +132,18 @@ sbom-generator/
 | ✅ 只會顯示被其他套件引用的資訊 | ✅ 只會顯示被其他套件引用的資訊 |
 
 **建議**：如果需要在報告中區分直接依賴和間接依賴，請將 `package.json` 與 `yarn.lock` 放在同一目錄下。
+
+### 關於 requirements.txt
+
+Python 的 `requirements.txt` 不包含依賴關係資訊，因此：
+
+| 特性 | 說明 |
+|------|------|
+| 直接依賴 | 檔案中所有套件都標記為 `[直接依賴]` |
+| 間接依賴 | 無法識別（requirements.txt 不記錄依賴樹） |
+| 版本資訊 | 從版本指定符中提取（如 `>=2.28.0` → `2.28.0`） |
+
+**注意**：如果需要完整的依賴樹分析，建議使用 `poetry.lock` 或 `Pipfile.lock`（未來將支援）。
 
 ## 使用方式
 
@@ -136,10 +159,12 @@ python main.py
 # 方法 2: 處理指定的檔案
 python main.py input_file/yarn.lock
 python main.py input_file/Gemfile.lock
+python main.py input_file/requirements.txt
 python main.py input_file/Dockerfile
 
 # 方法 3: 處理任意路徑的檔案
 python main.py /path/to/your/project/yarn.lock
+python main.py /path/to/your/project/requirements.txt
 python main.py /path/to/your/project/Dockerfile
 ```
 
@@ -273,6 +298,27 @@ CSV 中的「備註」欄位可能包含以下資訊：
 | `非 GitHub 來源` | Repository 不在 GitHub 上 |
 | `無法取得` | 無法從 registry 或 GitHub 取得資訊 |
 | `License type could not be determined` | GitHub 無法識別 License 類型 |
+
+## 開發
+
+### 執行測試
+
+```bash
+# 安裝依賴
+pip install -r requirements.txt
+
+# 執行測試
+pytest tests/ -v
+```
+
+### 測試檔案
+
+測試用的 fixture 檔案位於 `tests/fixtures/` 目錄：
+- `yarn.lock` - JavaScript/Node.js 測試檔案
+- `package.json` - npm 直接依賴定義
+- `Gemfile.lock` - Ruby 測試檔案
+- `requirements.txt` - Python 測試檔案
+- `Dockerfile` - Debian-based Dockerfile 測試檔案
 
 ## License
 
