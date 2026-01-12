@@ -45,7 +45,7 @@
 
 ## 系統需求
 
-- Python 3.9+
+- Python 3.10+
 - 網路連線（用於查詢 npm/RubyGems/PyPI registry 和 GitHub API）
 
 ## 安裝

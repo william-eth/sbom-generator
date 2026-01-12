@@ -19,7 +19,7 @@
 
 #### CI/CD
 - **GitHub Actions**: Automated testing on push and pull requests
-- **Python matrix**: Tests run on Python 3.9, 3.10, 3.11, and 3.12
+- **Python matrix**: Tests run on Python 3.10, 3.11, and 3.12
 - **Dependency caching**: Faster CI runs with pip cache
 
 ### Improvements

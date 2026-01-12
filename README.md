@@ -45,7 +45,7 @@ A tool for generating Software Bill of Materials (SBOM) reports. Extracts packag
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 - Internet connection (for querying npm/RubyGems/PyPI registries and GitHub API)
 
 ## Installation
