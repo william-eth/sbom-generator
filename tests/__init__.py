@@ -1,0 +1,3 @@
+"""
+SBOM Generator test suite.
+"""

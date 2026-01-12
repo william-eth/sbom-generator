@@ -1,0 +1,31 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    actionpack (7.1.0)
+      activesupport (= 7.1.0)
+      rack (>= 2.2.4)
+    activesupport (7.1.0)
+      concurrent-ruby (~> 1.0)
+      i18n (>= 1.6)
+      tzinfo (~> 2.0)
+    concurrent-ruby (1.2.2)
+    i18n (1.14.1)
+      concurrent-ruby (~> 1.0)
+    rack (3.0.8)
+    rails (7.1.0)
+      actionpack (= 7.1.0)
+      activesupport (= 7.1.0)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  rails (~> 7.1.0)
+
+RUBY VERSION
+   ruby 3.2.0p0
+
+BUNDLED WITH
+   2.4.0
